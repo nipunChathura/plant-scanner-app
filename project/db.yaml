@@ -1,0 +1,4 @@
+mysql_host: 'localhost'
+mysql_root: 'root'
+mysql_password: 'ijse'
+mysql_db: 'plant_db'
