@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
 import mysql.connector
 import yaml
 
@@ -28,7 +28,7 @@ def index():
         results = cur.fetchall()
         print(results)
         cur.close()
-        return 'success'
+        return redirect('/image-upload')
     return render_template('index.html')
 
 
@@ -43,8 +43,13 @@ def sing_up():
         cur.execute("insert into users(name, email, password) values(%s, %s, %s)", (name, email, password))
         mysql.commit()
         cur.close()
-        return 'success'
+        return redirect('/image-upload')
     return render_template('sing-up.html')
+
+
+@app.route('/image-upload', methods=["GET", "POST"])
+def image_upload():
+    return render_template("imageupload.html")
 
 
 if __name__ == "__main__":

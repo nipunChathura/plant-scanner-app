@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Upload Page</title>
+    <link rel="stylesheet" href="style/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+</head>
+<body class="bdy">
+    <h1 class="mt-3 text-white">Image Upload Page</h1>
+
+
+    <div class="row row1">
+  <div class="col-xs-1 center-block">
+    <center>
+      <canvas id="can" class="mt-5"></canvas>
+
+        <p></p>
+<p></p>
+<input type="file"  accept="image/*" id="finput" onchange="uploadImg()" class="btn-infoo">
+        <br>
+        <div class="butns">
+        <a type="button" class="btn btn-primary mt-5 me-3 Click-here" onclick="upload()" href="#demo-popup">Scanning</a>
+        <button type="button" class="btn btn-danger mt-5">Cancel</button>
+
+            <div class="custom-model-main">
+    <div class="custom-model-inner">
+    <div class="close-btn">×</div>
+        <div class="custom-model-wrap">
+            <div class="pop-up-content-wrap">
+               Content Here
+                <h1>image name is <span id="myText"></span></h1>
+            </div>
+        </div>
+    </div>
+    <div class="bg-overlay"></div>
+</div>
+
+        </div>
+    </center>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+<script>
+  SimplePixel = function(simple_image, x, y) {
+    __SimpleImageUtilities.funCheck('SimplePixel', 3, arguments.length);
+    this.container = simple_image;
+    this.x = x;
+    this.y = y;
+  };
+  SimplePixel.prototype = {
+    constructor: SimplePixel,
+    getX: function() {
+      __SimpleImageUtilities.funCheck('getX', 0, arguments.length);
+      return this.x;
+    },
+    getY: function() {
+      __SimpleImageUtilities.funCheck('getY', 0, arguments.length);
+      return this.y;
+    },
+    getRed: function() {
+      __SimpleImageUtilities.funCheck('getRed', 0, arguments.length);
+      return this.container.getRed(this.x, this.y);
+    },
+    getGreen: function() {
+      __SimpleImageUtilities.funCheck('getGreen', 0, arguments.length);
+      return this.container.getGreen(this.x, this.y);
+    },
+    getBlue: function() {
+      __SimpleImageUtilities.funCheck('getBlue', 0, arguments.length);
+      return this.container.getBlue(this.x, this.y);
+    },
+    getAlpha: function() {
+      __SimpleImageUtilities.funCheck('getAlpha', 0, arguments.length);
+      return this.container.getAlpha(this.x, this.y);
+    },
+    setRed: function(val) {
+      __SimpleImageUtilities.funCheck('setRed', 1, arguments.length);
+      this.container.setRed(this.x, this.y, val);
+    },
+    setGreen: function(val) {
+      __SimpleImageUtilities.funCheck('setGreen', 1, arguments.length);
+      this.container.setGreen(this.x, this.y, val);
+    },
+    setBlue: function(val) {
+      __SimpleImageUtilities.funCheck('setBlue', 1, arguments.length);
+      this.container.setBlue(this.x, this.y, val);
+    },
+    setAlpha: function(val) {
+      __SimpleImageUtilities.funCheck('setAlpha', 1, arguments.length);
+      this.container.setAlpha(this.x, this.y, val);
+    },
+    setAllFrom: function(pixel) {
+      __SimpleImageUtilities.funCheck('setAllFrom', 1, arguments.length);
+      this.setRed(pixel.getRed());
+      this.setGreen(pixel.getGreen());
+      this.setBlue(pixel.getBlue());
+      this.setAlpha(pixel.getAlpha());
+    },
+    toString: function() {
+      return 'r:' + this.getRed() + ' g:' + this.getGreen() + ' b:' + this.getBlue();
+    },
+    // Render pixel as string
+    getString: function() {
+      return this.toString();
+    }
+  };
+  // Note there is an Image built in, so don't use that name.
+  // A SimpleImage can be created with a url, size, or an existing htmlImage or canvas
+  SimpleImage = function() {
+    if (arguments.length < 0 || arguments.length > 2) {
+      __SimpleImageUtilities.funCheck('SimpleImage', 1, arguments.length);
+      return null;
+    }
+    // function map for to support "overloaded constructor"
+    var funMap = [
+      function() {
+        return __SimpleImageUtilities.EMPTY_IMAGE;
+      },
+      function(source) {
+        if (source instanceof HTMLImageElement) {
+          return source;
+        } else if (typeof source == 'string') {
+          return __SimpleImageUtilities.makeHTMLImageFromURL(source, this);
+        } else if (source instanceof HTMLInputElement && source.type == 'file') {
+          return __SimpleImageUtilities.makeHTMLImageFromInput(source.files[0], this);
+        } else if (source instanceof SimpleImage) {
+          return source.canvas;
+        } else if (source instanceof HTMLCanvasElement) {
+          return source;
+        } else {
+          __SimpleImageUtilities.throwError('Unrecognized value used to create a SimpleImage: ' + source);
+        }
+      },
+      function(width, height) {
+        if (width > 0 && height > 0) {
+          return __SimpleImageUtilities.makeHTMLImageFromSize(width, height);
+        } else {
+          __SimpleImageUtilities.throwError('Unable to create a SimpleImage with a negative width or height [' + width + 'x' + height + ']');
+        }
+      }
+    ];
+    // call appropriate constructor
+    var htmlImage = funMap[arguments.length].apply(this, arguments);
+    // actual content is backed by an invisible canvas
+    this.canvas = __SimpleImageUtilities.makeHTMLCanvas('SimpleImageCanvas');
+    this.canvas.style.display = 'none';
+    this.context = this.canvas.getContext('2d');
+    // when image is loaded, it will fill this in
+    this.imageData = null;
+    // check to see if we can complete the constructor now instead of waiting
+    if (htmlImage != null && (htmlImage instanceof HTMLCanvasElement || htmlImage.complete)) {
+      this.__init(htmlImage);
+    }
+    this.ACCEPTED_FILES = 'image.*';
+  }
+  SimpleImage.prototype = {
+    constructor: SimpleImage,
+    complete: function() {
+      return this.imageData != null;
+    },
+    getWidth: function() {
+      __SimpleImageUtilities.funCheck('getWidth', 0, arguments.length);
+      return this.width;
+    },
+    getHeight: function() {
+      __SimpleImageUtilities.funCheck('getHeight', 0, arguments.length);
+      return this.height;
+    },
+    getRed: function(x, y) {
+      __SimpleImageUtilities.funCheck('getRed', 2, arguments.length);
+      return this.imageData.data[this.__getIndex('getRed', x, y)];
+    },
+    getGreen: function(x, y) {
+      __SimpleImageUtilities.funCheck('getGreen', 2, arguments.length);
+      return this.imageData.data[this.__getIndex('getGreen', x, y) + 1];
+    },
+    getBlue: function(x, y) {
+      __SimpleImageUtilities.funCheck('getBlue', 2, arguments.length);
+      return this.imageData.data[this.__getIndex('getBlue', x, y) + 2];
+    },
+    getAlpha: function(x, y) {
+      __SimpleImageUtilities.funCheck('getAlpha', 2, arguments.length);
+      return this.imageData.data[this.__getIndex('getAlpha', x, y) + 3];
+    },
+    // Changes to the pixel write back to the image.
+    getPixel: function(x, y) {
+      __SimpleImageUtilities.funCheck('getPixel', 2, arguments.length);
+      __SimpleImageUtilities.rangeCheck(x, 0, this.getWidth(), 'getPixel', 'x', 'wide');
+      __SimpleImageUtilities.rangeCheck(y, 0, this.getHeight(), 'getPixel', 'y', 'tall');
+      return new SimplePixel(this, x, y);
+    },
+    setRed: function(x, y, value) {
+      __SimpleImageUtilities.funCheck('setRed', 3, arguments.length);
+      this.imageData.data[this.__getIndex('getRed', x, y)] = __SimpleImageUtilities.clamp(value);
+    },
+    setGreen: function(x, y, value) {
+      __SimpleImageUtilities.funCheck('setGreen', 3, arguments.length);
+      this.imageData.data[this.__getIndex('getGreen', x, y) + 1] = __SimpleImageUtilities.clamp(value);
+    },
+    setBlue: function(x, y, value) {
+      __SimpleImageUtilities.funCheck('setBlue', 3, arguments.length);
+      this.imageData.data[this.__getIndex('getBlue', x, y) + 2] = __SimpleImageUtilities.clamp(value);
+    },
+    setAlpha: function(x, y, value) {
+      __SimpleImageUtilities.funCheck('setAlpha', 3, arguments.length);
+      this.imageData.data[this.__getIndex('getAlpha', x, y) + 3] = __SimpleImageUtilities.clamp(value);
+    },
+    setPixel: function(x, y, pixel) {
+      __SimpleImageUtilities.funCheck('setPixel', 3, arguments.length);
+      __SimpleImageUtilities.rangeCheck(x, 0, this.getWidth(), 'setPixel', 'x', 'wide');
+      __SimpleImageUtilities.rangeCheck(y, 0, this.getHeight(), 'setPixel', 'y', 'tall');
+      this.setRed(x, y, pixel.getRed());
+      this.setBlue(x, y, pixel.getBlue());
+      this.setGreen(x, y, pixel.getGreen());
+      this.setAlpha(x, y, pixel.getAlpha());
+    },
+    // Scales contents of SimpleIage to the given size
+    setSize: function(width, height) {
+      __SimpleImageUtilities.funCheck('setSize', 2, arguments.length);
+      width = Math.floor(width);
+      height = Math.floor(height);
+      if (width > 0 && height > 0) {
+        // make sure we have the most current changes
+        __SimpleImageUtilities.flush(this.context, this.imageData);
+        this.imageData = __SimpleImageUtilities.changeSize(this.canvas, width, height);
+        this.width = width;
+        this.height = height;
+        this.canvas.width = width;
+        this.canvas.height = height;
+      } else {
+        __SimpleImageUtilities.throwError('You tried to set the size of a SimpleImage to a negative width or height [' + width + 'x' + height + ']');
+      }
+    },
+    // Draws to the given canvas, setting its size to match SimpleImage's size
+    drawTo: function(toCanvas) {
+      if (this.imageData != null) {
+        __SimpleImageUtilities.flush(this.context, this.imageData);
+        toCanvas.width = this.getWidth();
+        toCanvas.height = this.getHeight();
+        toCanvas.getContext('2d').drawImage(this.canvas, 0, 0, toCanvas.width, toCanvas.height);
+      } else {
+        var myself = this;
+        setTimeout(function() {
+          myself.drawTo(toCanvas);
+        }, 100);
+      }
+    },
+    // Export an image as an linear array of pixels that can be iterated over
+    toArray: function() {
+      __SimpleImageUtilities.funCheck('toArray', 0, arguments.length);
+      var array = new Array();
+      // nip 2012-7
+      // 1. simple-way (this is as good or faster in various browser tests)
+      // var array = new Array(this.getWidth() * this.getHeight());
+      // 2. change to cache-friendly y/x ordering
+      // Non-firefox browsers may benefit
+      for (var y = 0; y < this.getHeight(); y++) {
+        for (var x = 0; x < this.getWidth(); x++) {
+          //array[i++] = new SimplePixel(this, x, y);  // 2.
+          array.push(new SimplePixel(this, x, y)); // 1.
+        }
+      }
+      return array;
+    },
+    // Support iterator within for loops (eventually)
+    values: function() {
+      __SimpleImageUtilities.funCheck('values', 0, arguments.length);
+      return this.toArray();
+    },
+    // Better name than values if we have to use it
+    pixels: function() {
+      return this.values();
+    },
+    // Private methods: should not be called publicly, but it should not hurt if it is
+    // Completes the construction of this object once the htmlImage is loaded
+    __init: function(img) {
+      try {
+        this.id = img.id;
+        // this is a hack to make three different cases work together:
+        // - small empty image, thumbnail images, and canvases
+        this.width = ('naturalWidth' in img) ? Math.max(img.naturalWidth, img.width) : img.width;
+        this.height = ('naturalHeight' in img) ? Math.max(img.naturalHeight, img.height) : img.height;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        // are we copying an already loaded image or drawing it fresh
+        if (img instanceof HTMLCanvasElement) {
+          var canvasData = img.getContext('2d').getImageData(0, 0, this.width, this.height);
+          this.context.putImageData(canvasData, 0, 0);
+        } else {
+          this.context.drawImage(img, 0, 0, this.width, this.height);
+        }
+        this.imageData = this.context.getImageData(0, 0, this.width, this.height);
+      } catch (err) {
+        console.log(err);
+        __SimpleImageUtilities.throwError('The name you used to create a SimpleImage was not correct: ' + img.id);
+      }
+    },
+    // computes index into 1-d array, and checks correctness of x,y values
+    __getIndex: function(funName, x, y) {
+      __SimpleImageUtilities.rangeCheck(x, 0, this.getWidth(), funName, 'x', 'wide');
+      __SimpleImageUtilities.rangeCheck(y, 0, this.getHeight(), funName, 'y', 'tall');
+      return (Math.floor(x) + Math.floor(y) * this.getWidth()) * 4;
+    }
+  };
+  // Private helper functions, add __ to reduce chance they will conflict with anyone else's method names
+  var __SimpleImageUtilities = (function() {
+    // private globals
+    // image needed to seed "sized" image
+    var EMPTY_IMAGE_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAQAAAAnZu5uAAAAAXNSR0IArs4c6QAAABVJREFUeJxiYPgPhyQwAQAAAP//AwCgshjoJhZxhgAAAABJRU5ErkJggg==';
+    // number of canvases created to hold images
+    var globalCanvasCount = 0;
+    // load image by wrapping it in an HTML element
+    function makeHTMLImage(url, name, simpleImage, loadFunc) {
+      if (loadFunc == null) {
+        loadFunc = function() {
+          simpleImage.__init(this);
+          console.log('loaded image: ' + simpleImage.id);
+        }
+      }
+      var img = new Image();
+      img.onload = loadFunc;
+      img.src = url;
+      img.id = name;
+      img.style.display = 'none';
+      return img;
+    }
+    // public utility functions
+    return {
+      // make a blank image so it is cached for future uses
+      EMPTY_IMAGE: makeHTMLImage(EMPTY_IMAGE_DATA, 'EMPTY', null, function() {}),
+      // create a canvas element
+      makeHTMLCanvas: function(prefix) {
+        var canvas = document.createElement('canvas');
+        canvas.id = prefix + globalCanvasCount;
+        canvas.style.display = 'none';
+        canvas.innerHTML = 'Your browser does not support HTML5.'
+        globalCanvasCount++;
+        return canvas;
+      },
+      // get image from uploaded file input
+      makeHTMLImageFromInput: function(file, simpleImage) {
+        console.log('creating image: ' + file.name);
+        var reader = new FileReader();
+        reader.onload = function() {
+          makeHTMLImage(this.result, file.name.substr(file.name.lastIndexOf('/') + 1), simpleImage);
+        }
+        reader.readAsDataURL(file);
+        return null;
+      },
+      // get image from a relative URL
+      makeHTMLImageFromURL: function(url, simpleImage) {
+        var name = url.substr(0, url.indexOf(';'));
+        console.log('creating image: ' + name);
+        if (url.substr(0, 4) != 'http') {
+          return makeHTMLImage(url, name, simpleImage);
+        } else {
+          // does not work --- loading image from URL taints the canvas so we cannot use it :(
+          __SimpleImageUtilities.throwError('Unfortunately you cannot create a SimpleImage directly from a URL: ' + url);
+        }
+      },
+      // create an empty image of the given size
+      makeHTMLImageFromSize: function(width, height) {
+        console.log('creating image: ' + width + 'x' + height);
+        var img = __SimpleImageUtilities.EMPTY_IMAGE.cloneNode(true);
+        img.width = width;
+        img.height = height;
+        return img;
+      },
+      // set size of the image to the given values, scaling the pixels
+      changeSize: function(canvasOld, newWidth, newHeight) {
+        var canvasNew = __SimpleImageUtilities.makeHTMLCanvas('setSize_');
+        canvasNew.width = newWidth;
+        canvasNew.height = newHeight;
+        // draw old canvas to new canvas
+        var contextNew = canvasNew.getContext('2d');
+        contextNew.drawImage(canvasOld, 0, 0, newWidth, newHeight);
+        return contextNew.getImageData(0, 0, newWidth, newHeight);
+      },
+      // clamp values to be in the range 0..255
+      clamp: function(value) {
+        return Math.max(0, Math.min(Math.floor(value), 255));
+      },
+      // push accumulated local changes out to the screen
+      flush: function(context, imageData) {
+        if (imageData != null) {
+          context.putImageData(imageData, 0, 0, 0, 0, imageData.width, imageData.height);
+        }
+      },
+      // call this to abort with a message
+      throwError: function(message) {
+        throw new Error(message);
+      },
+      // called from user-facing functions to check number of arguments
+      funCheck: function(funcName, expectedLen, actualLen) {
+        if (expectedLen != actualLen) {
+          var s1 = (actualLen == 1) ? '' : 's'; // pluralize correctly
+          var s2 = (expectedLen == 1) ? '' : 's';
+          var message = 'You tried to call ' + funcName + ' with ' + actualLen + ' value' + s1 +
+            ', but it expects ' + expectedLen + ' value' + s2 + '.';
+          // someday: think about "values" vs. "arguments" here
+          __SimpleImageUtilities.throwError(message);
+        }
+      },
+      // called from user-facing functions to check if given value is valid
+      rangeCheck: function(value, low, high, funName, coordName, size) {
+        if (value < low || value >= high) {
+          var message = 'You tried to call ' + funName + ' for a pixel with ' + coordName + '-coordinate of ' + value +
+            ' in an image that is only ' + high + ' pixels ' + size +
+            ' (valid ' + coordName + ' coordinates are ' + low + ' to ' + (high - 1) + ').';
+          __SimpleImageUtilities.throwError(message);
+        }
+      }
+    };
+  })();
+</script>
+<script>
+    function upload() {
+  var fileinput = document.getElementById("finput1");
+  var filename = fileinput.value;
+  document.getElementById("myText").innerHTML = filename;
+  alert(filename);
+}
+function uploadImg() {
+  var imgcanvas = document.getElementById("can");
+  var fileinput = document.getElementById("finput");
+  var image = new SimpleImage(fileinput);
+  image.drawTo(imgcanvas);
+}
+
+</script>
+    <script>
+$(".Click-here").on("click", function () {
+  $(".custom-model-main").addClass("model-open");
+});
+$(".close-btn, .bg-overlay").click(function () {
+  $(".custom-model-main").removeClass("model-open");
+});
+
+</script>
+
+</body>
+</html>
+
+<style>
+    canvas {
+  border: 1px solid white;
+  width: 900px;
+  height: 360px;
+    }
+    h1 {
+  text-align: center;
+}
+
+  .row1{
+  margin-top: 35px;
+  }
+
+  .butns{
+  margin-left: 700px;
+  }
+
+  .bdy{
+  background-color: #0c0a1e;
+  }
+
+  .btn-infoo{
+  background-color: grey
+  }
+
+
+
+<!--============================-->
+
+.Click-here {
+  cursor: pointer;
+  background-image: linear-gradient(190deg, #f83600 0%, #fee140 100%);
+  color: #fff;
+  width: 180px;
+  text-align: center;
+  font-size: 16px;
+  padding: 18px 0;
+  margin: 0 auto;
+  transition: background-image 3s ease-in-out;
+}
+.Click-here:hover {
+  transition: background-image 3s ease-in-out;
+  background-image: linear-gradient(90deg, #fee140 0%, #f83600 100%);
+}
+.custom-model-main {
+  text-align: center;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0; /* z-index: 1050; */
+  -webkit-overflow-scrolling: touch;
+  outline: 0;
+  opacity: 0;
+  -webkit-transition: opacity 0.15s linear, z-index 0.15;
+  -o-transition: opacity 0.15s linear, z-index 0.15;
+  transition: opacity 0.15s linear, z-index 0.15;
+  z-index: -1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.model-open {
+  z-index: 99999;
+  opacity: 1;
+  overflow: hidden;
+}
+.custom-model-inner {
+  -webkit-transform: translate(0, -25%);
+  -ms-transform: translate(0, -25%);
+  transform: translate(0, -25%);
+  -webkit-transition: -webkit-transform 0.3s ease-out;
+  -o-transition: -o-transform 0.3s ease-out;
+  transition: -webkit-transform 0.3s ease-out;
+  -o-transition: transform 0.3s ease-out;
+  transition: transform 0.3s ease-out;
+  transition: transform 0.3s ease-out, -webkit-transform 0.3s ease-out;
+  display: inline-block;
+  vertical-align: middle;
+  width: 600px;
+  margin: 30px auto;
+  max-width: 97%;
+}
+.custom-model-wrap {
+  display: block;
+  width: 100%;
+  position: relative;
+  background-color: #fff;
+  border: 1px solid #999;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+  background-clip: padding-box;
+  outline: 0;
+  text-align: left;
+  padding: 20px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+.model-open .custom-model-inner {
+  -webkit-transform: translate(0, 0);
+  -ms-transform: translate(0, 0);
+  transform: translate(0, 0);
+  position: relative;
+  z-index: 999;
+}
+.model-open .bg-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 99;
+}
+.bg-overlay {
+  background: rgba(0, 0, 0, 0);
+  height: 100vh;
+  width: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  -webkit-transition: background 0.15s linear;
+  -o-transition: background 0.15s linear;
+  transition: background 0.15s linear;
+}
+.close-btn {
+  position: absolute;
+  right: 0;
+  top: -30px;
+  cursor: pointer;
+  z-index: 99;
+  font-size: 30px;
+  color: #fff;
+}
+
+@media screen and (min-width: 800px) {
+  .custom-model-main:before {
+    content: "";
+    display: inline-block;
+    height: auto;
+    vertical-align: middle;
+    margin-right: -0px;
+    height: 100%;
+  }
+}
+@media screen and (max-width: 799px) {
+  .custom-model-inner {
+    margin-top: 45px;
+  }
+}
+
+
+
+
+</style>
