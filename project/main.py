@@ -74,6 +74,8 @@ def image_upload():
         img = Image.open(file)
         img = transforms.ToTensor()(img)
         print(img)
+        img = img.view(1, 784)
+        pred = model(img)
 
         return "upload"
     return render_template("imageupload.html")
