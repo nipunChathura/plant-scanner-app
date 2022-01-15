@@ -3,3 +3,4 @@ mysql~=0.0.3
 mysql-connector-python~=8.0.27
 SQLAlchemy~=1.4.27
 Django~=4.0
+Pillow
